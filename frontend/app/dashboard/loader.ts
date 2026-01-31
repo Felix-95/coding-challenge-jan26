@@ -40,6 +40,7 @@ export interface DashboardData {
     createdAt: string;
   }>;
   algorithms: MatchingAlgorithm[];
+  error?: string;
 }
 
 /**
@@ -107,11 +108,6 @@ export async function getDashboardData(): Promise<DashboardData> {
       ? (results[8].result as Array<{ scoreAppleOnOrange: number; scoreOrangeOnApple: number; createdAt: string }>)
       : [];
 
-    // Debug: Log first apple to see structure
-    if (apples.length > 0) {
-      console.log("First apple from DB:", JSON.stringify(apples[0], null, 2));
-    }
-
     // Calculate average match score as success rate (0-100%) with 1 decimal place
     const successRate = allBestMatchScores.length > 0
       ? Math.round(
@@ -144,6 +140,6 @@ export async function getDashboardData(): Promise<DashboardData> {
       successRate: 0,
     };
 
-    return { metrics, apples: [], oranges: [], bestMatches: [], bestMatchScores: [], bestMatchesOverTime: [], algorithms: [] };
+    return { metrics, apples: [], oranges: [], bestMatches: [], bestMatchScores: [], bestMatchesOverTime: [], algorithms: [], error: error instanceof Error ? error.message : "Failed to fetch dashboard data" };
   }
 }

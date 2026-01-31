@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
           appleStatus: "pending",
           orangeStatus: "pending",
           status: "proposed",
-          reason: "", // TODO: LLM later
+          reason: "",
           reasonData: scores.breakdown,
         }, ["incomingFruitId", "appleId", "orangeId", "matchingAlgorithmId"]);
 

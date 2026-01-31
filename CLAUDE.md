@@ -40,9 +40,9 @@ deno test --config supabase/functions/_shared/deno.json supabase/functions/_shar
 ### Data Flow
 1. Edge function receives request → generates new fruit via `generateFruit()`
 2. Fruit communicates its attributes and preferences via `communicateAttributes()` / `communicatePreferences()`
-3. Fruit stored in SurrealDB (TODO)
-4. Query opposite fruit type, calculate compatibility scores (TODO)
-5. Return matches with LLM-generated explanations (TODO)
+3. Fruit stored in SurrealDB
+4. Query opposite fruit type, calculate compatibility scores
+5. Return matches with LLM-generated explanations
 
 ### Fruit Data Model
 - **Attributes**: size, weight, hasStem, hasLeaf, hasWorm, shineFactor, hasChemicals (all nullable)

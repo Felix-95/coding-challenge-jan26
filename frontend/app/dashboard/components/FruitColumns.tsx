@@ -10,9 +10,9 @@ interface FruitColumnsProps {
   oranges: Orange[];
 }
 
-interface FruitWithMatchScore extends Fruit {
+type FruitWithMatchScore = Fruit & {
   matchScores?: DetailedMatchScores;
-}
+};
 
 type ComparisonMode = "apple" | "orange";
 
@@ -23,10 +23,10 @@ export function FruitColumns({ apples, oranges }: FruitColumnsProps) {
 
   // Handle click on primary side (left column) - triggers match search AND manages expansion
   const handlePrimaryClick = (fruitId: string) => {
-    // If clicking the same item that's already selected
     if (selectedPrimaryId === fruitId) {
-      // Toggle expanded state
-      setExpandedPrimaryId((current) => (current === fruitId ? null : fruitId));
+      // Clicking the selected fruit again: deselect it, show all fruits
+      setSelectedPrimaryId(null);
+      setExpandedPrimaryId(null);
     } else {
       // Selecting a new item: select it and expand it
       setSelectedPrimaryId(fruitId);
@@ -181,7 +181,10 @@ export function FruitColumns({ apples, oranges }: FruitColumnsProps) {
                 </div>
               </div>
             ) : (
-              primaryFruits.map((fruit) => (
+              (selectedPrimaryId
+                ? primaryFruits.filter((f) => f.id === selectedPrimaryId)
+                : primaryFruits
+              ).map((fruit) => (
                 <FruitCard
                   key={fruit.id}
                   fruit={fruit}

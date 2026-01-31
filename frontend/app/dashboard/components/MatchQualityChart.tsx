@@ -23,9 +23,9 @@ interface Bucket {
 }
 
 export function MatchQualityChart({ matches }: MatchQualityChartProps) {
-  // Create 50 buckets (2% intervals: 0-2%, 2-4%, ..., 98-100%)
-  const numBuckets = 50;
-  const bucketSize = 1 / numBuckets; // 0.02 (2%)
+  // Create 100 buckets (1% intervals: 0-1%, 1-2%, ..., 99-100%)
+  const numBuckets = 100;
+  const bucketSize = 1 / numBuckets; // 0.01 (1%)
   
   const buckets: Bucket[] = Array.from({ length: numBuckets }, (_, i) => {
     const min = i * bucketSize;
@@ -65,10 +65,6 @@ export function MatchQualityChart({ matches }: MatchQualityChartProps) {
 
   // Chart dimensions
   const chartHeight = 280;
-  const chartWidth = 100; // percentage
-  const barGroupWidth = 100 / buckets.length; // percentage per group
-  const barWidth = barGroupWidth * 0.38; // 38% of group width per bar
-  const gap = barGroupWidth * 0.04; // 4% gap between bars
 
   // Empty state
   if (matches.length === 0) {
@@ -175,21 +171,32 @@ export function MatchQualityChart({ matches }: MatchQualityChartProps) {
             );
           })}
 
-          {/* X-axis labels (every 10th bucket: 0%, 20%, 40%, 60%, 80%, 100%) */}
-          {[0, 10, 20, 30, 40, 50].map((i) => {
-            if (i >= numBuckets) return null;
-            const xPos = i * (1150 / numBuckets) + (1150 / numBuckets) / 2;
+          {/* X-axis grid lines and labels every 5% */}
+          {Array.from({ length: 21 }, (_, k) => k * 5).map((pct) => {
+            const xPos = (pct / 100) * 1150;
             return (
-              <text
-                key={i}
-                x={xPos}
-                y={chartHeight + 25}
-                textAnchor="middle"
-                className="fill-white/50"
-                fontSize="11"
-              >
-                {Math.round((i / numBuckets) * 100)}%
-              </text>
+              <g key={pct}>
+                {/* Vertical grid line */}
+                <line
+                  x1={xPos}
+                  y1={0}
+                  x2={xPos}
+                  y2={chartHeight}
+                  stroke="rgba(255, 255, 255, 0.1)"
+                  strokeWidth="1"
+                  strokeDasharray={pct === 0 ? "0" : "4 4"}
+                />
+                {/* X-axis label */}
+                <text
+                  x={xPos}
+                  y={chartHeight + 25}
+                  textAnchor="middle"
+                  className="fill-white/50"
+                  fontSize="11"
+                >
+                  {pct}%
+                </text>
+              </g>
             );
           })}
         </svg>
