@@ -1,46 +1,38 @@
 import { Suspense } from "react";
 import { getDashboardData } from "./loader";
 import { RunMatchingButton } from "./RunMatchingButton";
-import { MatchVisualization } from "./components/MatchVisualization";
-
-// =============================================================================
-// ⚠️  DISCLAIMER
-// =============================================================================
-// This dashboard is SCAFFOLDING ONLY. Feel free to:
-// - Completely redesign the layout and components
-// - Remove any sections that don't fit your vision
-// - Add entirely new metrics and visualizations
-// - Change the styling, colors, and theme
-//
-// BE CREATIVE! This is just a starting point to get you going.
-// =============================================================================
+import Link from "next/link";
+import { MatchQualityChart } from "./components/MatchQualityChart";
+import { MatchesOverTimeChart } from "./components/MatchesOverTimeChart";
+import { BestMatchesTable } from "./components/BestMatchesTable";
+import { AlgorithmSelector } from "./components/AlgorithmSelector";
 
 // =============================================================================
 // TYPES
 // =============================================================================
 
-// These are example types - define your own based on your solution!
 export interface MatchMetrics {
   totalApples: number;
   totalOranges: number;
   totalMatches: number;
-  successRate: number;
+  successRate: number; // Now represents average score with 1 decimal place
 }
 
 // =============================================================================
 // SERVER DATA LOADING
 // =============================================================================
 
-async function DashboardContent() {
+async function AlgorithmSelectorContent() {
+  const data = await getDashboardData();
+
+  return <AlgorithmSelector algorithms={data.algorithms} />;
+}
+
+async function MetricsContent() {
   const data = await getDashboardData();
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-      {/* 
-        ⚠️ EXAMPLE METRICS - Replace with your own!
-        Think about what metrics actually demonstrate your system is working well.
-        These are just placeholders to show the pattern.
-      */}
       <MetricCard
         title="Total Apples"
         value={data.metrics.totalApples}
@@ -54,26 +46,42 @@ async function DashboardContent() {
         description="Oranges in the system"
       />
       <MetricCard
-        title="Total Matches"
+        title="Best Matches"
         value={data.metrics.totalMatches}
         icon="🍐"
-        description="Successful pear-ings"
+        description="Total best matches"
       />
       <MetricCard
-        title="Success Rate"
-        value={`${data.metrics.successRate}%`}
+        title="Avg Match Score"
+        value={`${data.metrics.successRate.toFixed(1)}%`}
         icon="📊"
-        description="Match success rate"
+        description="Average best match quality"
       />
     </div>
   );
 }
 
+async function BestMatchesContent() {
+  const data = await getDashboardData();
+
+  return <BestMatchesTable matches={data.bestMatches} />;
+}
+
+async function MatchQualityChartContent() {
+  const data = await getDashboardData();
+
+  return <MatchQualityChart matches={data.bestMatchScores} />;
+}
+
+async function MatchesOverTimeChartContent() {
+  const data = await getDashboardData();
+
+  return <MatchesOverTimeChart matches={data.bestMatchesOverTime} />;
+}
+
 // =============================================================================
 // COMPONENTS
 // =============================================================================
-
-// ⚠️ These components are examples - build your own or modify as needed!
 
 interface MetricCardProps {
   title: string;
@@ -124,19 +132,6 @@ function DashboardSkeleton() {
   );
 }
 
-/**
- * A helper component to display scaffold notes in the UI.
- * Remove this component entirely when building your solution!
- */
-function ScaffoldNote({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mb-6 rounded-xl border border-dashed border-amber-400/30 bg-amber-500/10 px-5 py-4 text-sm text-amber-200 backdrop-blur-sm">
-      <span className="mr-2">💡</span>
-      {children}
-    </div>
-  );
-}
-
 // =============================================================================
 // PAGE
 // =============================================================================
@@ -148,17 +143,24 @@ export default function DashboardPage() {
       <header className="border-b border-white/10 bg-white/5 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-6 py-8">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-white">
-                🍎 Matchmaking Dashboard 🍊
-              </h1>
-              <p className="mt-2 text-sm text-white/70">
-                Creating perfect pears, one match at a time
-              </p>
-            </div>
+            <Link href="/dashboard" className="hover:opacity-80 transition-opacity">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight text-white">
+                  🍎 Matchmaking Dashboard 🍊
+                </h1>
+                <p className="mt-2 text-sm text-white/70">
+                  Creating perfect pears, one match at a time
+                </p>
+              </div>
+            </Link>
             <div className="flex items-center gap-4">
+              <Suspense fallback={<div className="h-9 w-48 animate-pulse rounded-lg bg-white/10" />}>
+                <AlgorithmSelectorContent />
+              </Suspense>
               <RunMatchingButton />
-              <button className="btn-secondary">New Conversation</button>
+              <Link href="/matches" className="btn-secondary">
+                Detailed Matches →
+              </Link>
             </div>
           </div>
         </div>
@@ -169,113 +171,44 @@ export default function DashboardPage() {
         {/* Metrics Section */}
         <section className="mb-12">
           <h2 className="mb-6 text-xl font-bold text-white">Overview Metrics</h2>
-          <ScaffoldNote>
-            <strong>This entire section is just an example!</strong> Think about
-            what metrics actually prove your matchmaking system works well.
-            Quality over quantity - pick metrics that tell a compelling story.
-          </ScaffoldNote>
           <Suspense fallback={<DashboardSkeleton />}>
-            <DashboardContent />
+            <MetricsContent />
           </Suspense>
-        </section>
-
-        {/* Visualization Section */}
-        <section className="mb-12">
-          <h2 className="mb-6 text-xl font-bold text-white">
-            Matchmaking Visualization
-          </h2>
-          <MatchVisualization />
         </section>
 
         {/* Recent Matches Section */}
         <section className="mb-12">
-          <h2 className="mb-6 text-xl font-bold text-white">Recent Matches</h2>
-          <ScaffoldNote>
-            <strong>A table might not be the best way to show matches.</strong>{" "}
-            Consider cards, a feed, or something more visual. You decide what
-            data to show and how to present it.
-          </ScaffoldNote>
-          <div className="card">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-white/80">
-                      Apple
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-white/80">
-                      Orange
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-white/80">
-                      Match Score
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-white/80">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-white/80">
-                      Created At
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="px-4 py-8 text-center text-sm text-white/60"
-                    >
-                      No matches yet. Start a new conversation to create your
-                      first pear! 🍐
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <h2 className="mb-6 text-xl font-bold text-white">Recent Best Matches</h2>
+          <Suspense fallback={<div className="card animate-pulse h-64" />}>
+            <BestMatchesContent />
+          </Suspense>
         </section>
 
         {/* Analytics Section */}
         <section>
           <h2 className="mb-6 text-xl font-bold text-white">Analytics</h2>
-          <ScaffoldNote>
-            <strong>
-              These chart placeholders are arbitrary examples - don&apos;t feel bound
-              to them!
-            </strong>{" "}
-            Design analytics that demonstrate YOUR system&apos;s performance. What
-            metrics convince YOU that the matchmaking is working well?
-          </ScaffoldNote>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="card min-h-[300px]">
+          <div className="space-y-6">
+            {/* Match Quality Distribution */}
+            <div className="card">
               <h3 className="mb-4 font-semibold text-white/80">
-                Example: Match Quality Distribution
+                Match Quality Distribution
               </h3>
-              <div className="flex h-full items-center justify-center text-white/50">
-                <p className="text-sm">
-                  Replace with your own analytics component
-                </p>
-              </div>
+              <Suspense fallback={<div className="flex h-[400px] items-center justify-center text-white/50"><p className="text-sm">Loading chart...</p></div>}>
+                <MatchQualityChartContent />
+              </Suspense>
             </div>
-            <div className="card min-h-[300px]">
+            
+            {/* Satisfaction Over Time */}
+            <div className="card">
               <h3 className="mb-4 font-semibold text-white/80">
-                Example: Matches Over Time
+                Satisfaction Over Time
               </h3>
-              <div className="flex h-full items-center justify-center text-white/50">
-                <p className="text-sm">
-                  Replace with your own analytics component
-                </p>
-              </div>
+              <Suspense fallback={<div className="flex h-[400px] items-center justify-center text-white/50"><p className="text-sm">Loading chart...</p></div>}>
+                <MatchesOverTimeChartContent />
+              </Suspense>
             </div>
           </div>
         </section>
-
-        {/* Footer Note */}
-        <footer className="mt-16 rounded-xl border border-dashed border-white/20 bg-white/5 px-6 py-5 text-center text-sm text-white/70 backdrop-blur-sm">
-          <p className="font-semibold text-white">🚀 This entire dashboard is just scaffolding!</p>
-          <p className="mt-1">
-            Feel free to completely redesign, restructure, or rebuild from
-            scratch.
-          </p>
-        </footer>
       </main>
     </div>
   );

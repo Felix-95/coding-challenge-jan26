@@ -29,8 +29,8 @@ DEFINE FIELD type ON oranges TYPE string ASSERT $value = "orange";
 DEFINE FIELD attributes ON oranges TYPE object;
 DEFINE FIELD attributes.size ON oranges TYPE option<float>;
 DEFINE FIELD attributes.weight ON oranges TYPE option<float>;
-DEFINE FIELD attributes.hasStem ON oranges TYPE option<bool>;
 DEFINE FIELD attributes.hasLeaf ON oranges TYPE option<bool>;
+DEFINE FIELD attributes.hasStem ON oranges TYPE option<bool>;
 DEFINE FIELD attributes.hasWorm ON oranges TYPE option<bool>;
 DEFINE FIELD attributes.shineFactor ON oranges TYPE option<string>;
 DEFINE FIELD attributes.hasChemicals ON oranges TYPE option<bool>;
@@ -85,6 +85,7 @@ DEFINE FIELD matchingAlgorithmVersion ON match TYPE string;
 DEFINE FIELD overallScore ON match TYPE float ASSERT $value >= 0 AND $value <= 1;
 DEFINE FIELD scoreAppleOnOrange ON match TYPE float ASSERT $value >= 0 AND $value <= 1;
 DEFINE FIELD scoreOrangeOnApple ON match TYPE float ASSERT $value >= 0 AND $value <= 1;
+DEFINE FIELD bestMatch ON match TYPE bool DEFAULT false;
 
 -- Constraints
 DEFINE FIELD passedHardConstraints ON match TYPE bool;
@@ -98,6 +99,10 @@ DEFINE FIELD status ON match TYPE string ASSERT $value IN ["proposed", "mutual_m
 -- Explanation
 DEFINE FIELD reason ON match TYPE string;
 DEFINE FIELD reasonData ON match TYPE option<object>;
+
+-- LLM-generated messages for highest-scoring match
+DEFINE FIELD messageToIncoming ON match TYPE option<string>;
+DEFINE FIELD messageToExisting ON match TYPE option<string>;
 
 -- Lifecycle
 DEFINE FIELD createdAt ON match TYPE datetime DEFAULT time::now();

@@ -40,6 +40,7 @@ export interface Match {
   orangeId: string;
   score: number;
   status: "pending" | "confirmed" | "rejected";
+  bestMatch: boolean;
   createdAt: Date;
 }
 
@@ -72,12 +73,14 @@ interface MatchmakingState {
 
   // UI State
   activeConversationId: string | null;
+  selectedAlgorithmKey: string | null;
   isLoading: boolean;
   error: string | null;
 
   // Actions
   setApples: (apples: Apple[]) => void;
   setOranges: (oranges: Orange[]) => void;
+  setSelectedAlgorithmKey: (key: string) => void;
   addMatch: (match: Match) => void;
   setActiveConversation: (id: string | null) => void;
   addConversation: (conversation: Conversation) => void;
@@ -100,6 +103,7 @@ const initialState = {
   matches: [],
   conversations: [],
   activeConversationId: null,
+  selectedAlgorithmKey: null as string | null,
   isLoading: false,
   error: null,
 };
@@ -117,6 +121,8 @@ export const useMatchmakingStore = create<MatchmakingState>()(
         setApples: (apples) => set({ apples }),
 
         setOranges: (oranges) => set({ oranges }),
+
+        setSelectedAlgorithmKey: (key) => set({ selectedAlgorithmKey: key }),
 
         addMatch: (match) =>
           set((state) => ({

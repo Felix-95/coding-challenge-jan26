@@ -62,6 +62,54 @@ class SurrealDBClient {
     return results[0]?.result as T;
   }
 
+  /**
+   * Create a record with proper handling of record references.
+   * Fields listed in recordFields will be treated as record references (not quoted as strings).
+   */
+  async createWithRecords<T = unknown>(
+    table: string,
+    data: Record<string, unknown>,
+    recordFields: string[]
+  ): Promise<T> {
+    // Build field assignments manually to handle record references
+    const assignments: string[] = [];
+
+    for (const [key, value] of Object.entries(data)) {
+      if (value === null || value === undefined) {
+        continue; // Skip null/undefined values
+      }
+
+      if (recordFields.includes(key)) {
+        // Record reference - don't quote it
+        assignments.push(`${key}: ${value}`);
+      } else if (typeof value === "string") {
+        // String - escape and quote
+        assignments.push(`${key}: "${value.replace(/"/g, '\\"')}"`);
+      } else if (typeof value === "object") {
+        // Object/array - JSON stringify
+        assignments.push(`${key}: ${JSON.stringify(value)}`);
+      } else {
+        // Number, boolean, etc - use as is
+        assignments.push(`${key}: ${value}`);
+      }
+    }
+
+    const sql = `INSERT INTO ${table} { ${assignments.join(", ")} };`;
+    const results = await this.query<T[]>(sql);
+
+    // Check for query-level errors
+    if (results[0]?.status === "ERR") {
+      throw new Error(`SurrealDB create failed: ${results[0].result}`);
+    }
+
+    // Extract the result from the response
+    if (results[0]?.result && Array.isArray(results[0].result)) {
+      return results[0].result[0] as T;
+    }
+
+    return results[0]?.result as T;
+  }
+
   private stripNulls(obj: unknown): unknown {
     if (obj === null || obj === undefined) {
       return undefined;

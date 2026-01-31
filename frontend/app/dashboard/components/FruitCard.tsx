@@ -2,16 +2,32 @@
 
 import { useState } from "react";
 import type { Fruit, FruitAttributes, FruitPreferences, ShineFactor, NumberRange } from "../types";
+import type { DetailedMatchScores } from "@/lib/matchingScorer";
 
 interface FruitCardProps {
   fruit: Fruit;
   isSelected: boolean;
+  isExpanded?: boolean; // External expansion control (for primary side)
   onClick: () => void;
+  matchScores?: DetailedMatchScores;
+  isPrimarySide: boolean; // Whether this card is on the primary (left) or secondary (right) side
+  comparingFruitPreferences?: FruitPreferences; // Preferences of the fruit we're comparing against
 }
 
-export function FruitCard({ fruit, isSelected, onClick }: FruitCardProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+export function FruitCard({ 
+  fruit, 
+  isSelected, 
+  isExpanded: externalIsExpanded,
+  onClick, 
+  matchScores, 
+  isPrimarySide,
+  comparingFruitPreferences 
+}: FruitCardProps) {
+  const [internalIsExpanded, setInternalIsExpanded] = useState(false);
   const { id, type, attributes, preferences } = fruit;
+
+  // Use external expansion state for primary side, internal for secondary side
+  const isExpanded = isPrimarySide ? (externalIsExpanded ?? false) : internalIsExpanded;
 
   // Format ID for display (remove the "apple:" or "orange:" prefix)
   const displayId = id.split(":")[1]?.slice(0, 8) || id;
@@ -82,15 +98,41 @@ export function FruitCard({ fruit, isSelected, onClick }: FruitCardProps) {
     return true;
   };
 
-  // Get only preferences with values
+  // Get only preferences with values for THIS fruit
   const activePreferences = (Object.keys(preferences) as Array<keyof FruitPreferences>)
     .filter(hasPreferenceValue);
 
+  // Get only preferences with values for the COMPARING fruit (if provided)
+  const comparingActivePreferences = comparingFruitPreferences 
+    ? (Object.keys(comparingFruitPreferences) as Array<keyof FruitPreferences>)
+        .filter(key => {
+          const value = comparingFruitPreferences[key];
+          if (value === undefined) return false;
+          
+          // For NumberRange, check if min or max is defined
+          if (typeof value === "object" && !Array.isArray(value) && value !== null) {
+            const range = value as NumberRange;
+            return range.min !== undefined || range.max !== undefined;
+          }
+          
+          // For arrays (shineFactor can be array)
+          if (Array.isArray(value)) {
+            return value.length > 0;
+          }
+          
+          // For other values (boolean, string), they're defined
+          return true;
+        })
+    : [];
+
   const handleCardClick = (e: React.MouseEvent) => {
-    // Toggle expanded state
-    setIsExpanded(!isExpanded);
-    // Also trigger selection
-    onClick();
+    if (isPrimarySide) {
+      // Primary side: clicking triggers selection (expansion controlled externally)
+      onClick();
+    } else {
+      // Secondary side: clicking only expands/collapses (internal state)
+      setInternalIsExpanded(!internalIsExpanded);
+    }
   };
 
   return (
@@ -148,9 +190,171 @@ export function FruitCard({ fruit, isSelected, onClick }: FruitCardProps) {
         </div>
       </div>
 
+      {/* Match Scores - Visible when matchScores are provided */}
+      {matchScores && (
+        <div className="mt-3 border-t border-white/10 pt-3">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-white/70">
+                Match Quality
+              </span>
+              <span className="text-xs text-white/60">
+                {(matchScores.overallScore * 100).toFixed(0)}%
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-lg bg-white/5 p-2">
+                <div className="text-white/60 mb-1">
+                  {type === "apple" ? "🍎 → 🍊" : "🍊 → 🍎"}
+                </div>
+                <div className="font-bold text-white">
+                  {type === "apple" 
+                    ? (matchScores.scoreAppleOnOrange * 100).toFixed(0)
+                    : (matchScores.scoreOrangeOnApple * 100).toFixed(0)
+                  }%
+                </div>
+              </div>
+              <div className="rounded-lg bg-white/5 p-2">
+                <div className="text-white/60 mb-1">
+                  {type === "apple" ? "🍊 → 🍎" : "🍎 → 🍊"}
+                </div>
+                <div className="font-bold text-white">
+                  {type === "apple" 
+                    ? (matchScores.scoreOrangeOnApple * 100).toFixed(0)
+                    : (matchScores.scoreAppleOnOrange * 100).toFixed(0)
+                  }%
+                </div>
+              </div>
+            </div>
+            {/* Overall Score Bar */}
+            <div className="mt-2">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                <div 
+                  className={`h-full transition-all duration-500 ${
+                    matchScores.overallScore >= 0.7 
+                      ? "bg-green-500" 
+                      : matchScores.overallScore >= 0.4 
+                      ? "bg-yellow-500" 
+                      : "bg-red-500"
+                  }`}
+                  style={{ width: `${matchScores.overallScore * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Expanded View - Full Details */}
       {isExpanded && (
         <div className="mt-4 space-y-4 border-t border-white/10 pt-4">
+          {/* Match Score Breakdown - Show when matchScores are available */}
+          {matchScores && (
+            <div>
+              <h4 className="mb-2 text-sm font-bold text-white">🎯 Match Breakdown</h4>
+              <div className="space-y-3">
+                {/* Directional Scores */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {/* From comparing fruit's perspective (the one we selected on left) */}
+                  <div className="rounded-lg bg-white/5 p-2">
+                    <div className="mb-1 font-semibold text-white/80">
+                      {type === "apple" ? "Orange → Apple" : "Apple → Orange"}
+                    </div>
+                    <div className="mb-2 text-xl font-bold text-white">
+                      {type === "apple" 
+                        ? (matchScores.scoreOrangeOnApple * 100).toFixed(1)
+                        : (matchScores.scoreAppleOnOrange * 100).toFixed(1)
+                      }%
+                    </div>
+                    <div className="space-y-1">
+                      {/* Show only attributes that the COMPARING fruit (left side) has preferences for */}
+                      {comparingActivePreferences.length > 0 ? (
+                        comparingActivePreferences.map((attr) => {
+                          const breakdown = type === "apple" 
+                            ? matchScores.breakdown.orangeOnApple 
+                            : matchScores.breakdown.appleOnOrange;
+                          const score = breakdown[attr as string];
+                          
+                          const label = {
+                            size: "size",
+                            weight: "weight",
+                            hasStem: "hasStem",
+                            hasLeaf: "hasLeaf",
+                            hasWorm: "hasWorm",
+                            shineFactor: "shineFactor",
+                            hasChemicals: "hasChemicals",
+                          }[attr];
+                          
+                          return (
+                            <div key={attr} className="flex items-center justify-between text-[10px]">
+                              <span className="text-white/60">{label}:</span>
+                              <span className={`font-semibold ${
+                                score === 1 ? "text-green-400" : 
+                                score === 0 ? "text-red-400" : "text-yellow-400"
+                              }`}>
+                                {(score * 100).toFixed(0)}%
+                              </span>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-[10px] text-white/50 italic">No preferences</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* From this fruit's perspective */}
+                  <div className="rounded-lg bg-white/5 p-2">
+                    <div className="mb-1 font-semibold text-white/80">
+                      {type === "apple" ? "Apple → Orange" : "Orange → Apple"}
+                    </div>
+                    <div className="mb-2 text-xl font-bold text-white">
+                      {type === "apple" 
+                        ? (matchScores.scoreAppleOnOrange * 100).toFixed(1)
+                        : (matchScores.scoreOrangeOnApple * 100).toFixed(1)
+                      }%
+                    </div>
+                    <div className="space-y-1">
+                      {/* Only show attributes that THIS fruit has preferences for */}
+                      {activePreferences.length > 0 ? (
+                        activePreferences.map((attr) => {
+                          const breakdown = type === "apple" 
+                            ? matchScores.breakdown.appleOnOrange 
+                            : matchScores.breakdown.orangeOnApple;
+                          const score = breakdown[attr as string];
+                          
+                          const label = {
+                            size: "size",
+                            weight: "weight",
+                            hasStem: "hasStem",
+                            hasLeaf: "hasLeaf",
+                            hasWorm: "hasWorm",
+                            shineFactor: "shineFactor",
+                            hasChemicals: "hasChemicals",
+                          }[attr];
+                          
+                          return (
+                            <div key={attr} className="flex items-center justify-between text-[10px]">
+                              <span className="text-white/60">{label}:</span>
+                              <span className={`font-semibold ${
+                                score === 1 ? "text-green-400" : 
+                                score === 0 ? "text-red-400" : "text-yellow-400"
+                              }`}>
+                                {(score * 100).toFixed(0)}%
+                              </span>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-[10px] text-white/50 italic">No preferences</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* All Attributes */}
           <div>
             <h4 className="mb-2 text-sm font-bold text-white">📋 All Attributes</h4>

@@ -3,6 +3,7 @@ import "@supabase/functions-js/edge-runtime.d.ts";
 import { generateApple, communicateAttributes, communicatePreferences } from "../_shared/generateFruit.ts";
 import { getDb } from "../_shared/db.ts";
 import { computeMatchScores, type FruitData } from "../_shared/matchingScorer.ts";
+import { generateMatchMessages, type MatchContext } from "../_shared/matchMessages.ts";
 
 /**
  * Get Incoming Apple Edge Function
@@ -47,14 +48,14 @@ Deno.serve(async (req) => {
 
     // Step 4: Match the new apple to existing oranges
     // Fetch active soft-criteria algorithm
-    const algorithmResult = await db.query<[{ id: string; key: string; name: string; version: string }[]]>(
+    const algorithmResult = await db.query<{ id: string; key: string; name: string; version: string }[]>(
       `SELECT * FROM matching_algorithm WHERE key = 'soft-criteria-v1' AND status = 'active' LIMIT 1`
     );
-    const algorithm = algorithmResult[0]?.[0];
+    const algorithm = algorithmResult[0]?.result?.[0];
 
     // Fetch all oranges
-    const orangesResult = await db.query<[FruitData[]]>(`SELECT * FROM oranges`);
-    const oranges = orangesResult[0] || [];
+    const orangesResult = await db.query<(FruitData & { id: string })[]>(`SELECT * FROM oranges`);
+    const oranges = orangesResult[0]?.result || [];
 
     // Compute matches and insert records
     const appleData: FruitData = {
@@ -73,13 +74,11 @@ Deno.serve(async (req) => {
 
       // Insert match record if algorithm exists
       if (algorithm) {
-        // deno-lint-ignore no-explicit-any
-        const orangeRecord = orange as any;
-        const matchRecord = await db.create("match", {
+        const matchRecord = await db.createWithRecords("match", {
           incomingFruitId: createdApple.id,
           incomingKind: "apple",
           appleId: createdApple.id,
-          orangeId: orangeRecord.id,
+          orangeId: orange.id,
           matchingAlgorithmId: algorithm.id,
           matchingAlgorithmName: algorithm.name,
           matchingAlgorithmVersion: algorithm.version,
@@ -93,18 +92,57 @@ Deno.serve(async (req) => {
           status: "proposed",
           reason: "", // TODO: LLM later
           reasonData: scores.breakdown,
-        });
+        }, ["incomingFruitId", "appleId", "orangeId", "matchingAlgorithmId"]);
 
         matches.push({
           matchId: matchRecord.id,
-          orangeId: orangeRecord.id,
+          orangeId: orange.id,
           scores,
         });
       }
     }
 
-    // Step 5: Communicate matching results via LLM
-    // TODO: Implement matching results communication logic
+    // Step 5: Generate LLM messages for highest-scoring match
+    let messages: { messageToIncoming: string | null; messageToExisting: string | null } | null = null;
+
+    if (matches.length > 0) {
+      // Find highest-scoring match(es)
+      const maxScore = Math.max(...matches.map(m => m.scores.overallScore));
+      const topMatches = matches.filter(m => m.scores.overallScore === maxScore);
+      
+      // Randomly pick one if there are ties
+      const bestMatch = topMatches[Math.floor(Math.random() * topMatches.length)];
+
+      // Get the orange data for message generation
+      const bestOrange = oranges.find((o) => o.id === bestMatch.orangeId);
+
+      if (bestOrange) {
+        const matchContext: MatchContext = {
+          incomingKind: "apple",
+          overallScore: bestMatch.scores.overallScore,
+          scoreAppleOnOrange: bestMatch.scores.scoreAppleOnOrange,
+          scoreOrangeOnApple: bestMatch.scores.scoreOrangeOnApple,
+          breakdown: bestMatch.scores.breakdown,
+          incomingAttributes: apple.attributes,
+          incomingPreferences: apple.preferences,
+          existingAttributes: bestOrange.attributes,
+          existingPreferences: bestOrange.preferences,
+        };
+
+        messages = await generateMatchMessages(matchContext);
+
+        // Update match record with messages and bestMatch flag in SurrealDB
+        const updateParts: string[] = ["bestMatch = true"];
+        if (messages.messageToIncoming) {
+          updateParts.push(`messageToIncoming = "${messages.messageToIncoming.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`);
+        }
+        if (messages.messageToExisting) {
+          updateParts.push(`messageToExisting = "${messages.messageToExisting.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`);
+        }
+
+        await db.query(`UPDATE ${bestMatch.matchId} SET ${updateParts.join(", ")}`);
+      }
+    }
 
     return new Response(JSON.stringify({
       message: "Apple received and stored",
@@ -115,6 +153,7 @@ Deno.serve(async (req) => {
       },
       matchCount: matches.length,
       matches: matches,
+      messages: messages,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
