@@ -2,7 +2,7 @@ Hey Julian & Daniel,
 
 das ist mein Versuch der Apple-Oranges coding challenge. Hier kurze infos was beim Ausführen beachtet werden muss:
 
-- In `.env.local` muss OpenAI API key gesetzt werden
+- ⚠️ In `.env.local` muss OpenAI API key gesetzt werden
 - Einige Skripte müssen zur initialisierung ausgeführt werden
 - An edge functions muss `.env.local` übergeben werden
 
@@ -19,7 +19,6 @@ surreal start --user root --pass root memory
 **Terminal 2** — Supabase + Edge Functions:
 ```bash
 npx supabase start
-cp supabase/.env.example supabase/.env.local
 # Add your OPENAI_API_KEY to supabase/.env.local
 ./scripts/apply-schema.sh
 ./scripts/serve-functions.sh  # stays running
