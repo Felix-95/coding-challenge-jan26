@@ -1,44 +1,63 @@
 import type { MatchMetrics } from "./page";
-
-// =============================================================================
-// ⚠️  DISCLAIMER
-// =============================================================================
-// This loader is EXAMPLE SCAFFOLDING. You should:
-// - Define your own data types based on your solution
-// - Implement actual database queries to SurrealDB
-// - Add whatever data fetching logic your dashboard needs
-//
-// The structure here is just one possible approach - feel free to do
-// something completely different!
-// =============================================================================
+import { getDb } from "@/lib/db";
 
 export interface DashboardData {
   metrics: MatchMetrics;
-  // Add whatever your dashboard needs!
 }
 
 /**
  * Server-side data loader for the dashboard page.
- *
- * ⚠️ This is placeholder code! Replace with your actual implementation.
- *
- * This function runs on the server and can:
- * - Query SurrealDB directly
- * - Call edge functions
- * - Access server-only resources
+ * Queries SurrealDB directly to fetch real-time metrics.
  */
 export async function getDashboardData(): Promise<DashboardData> {
-  // Simulate network delay for loading state demo
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  try {
+    const db = await getDb();
 
-  // TODO: Replace with actual SurrealDB or supabase queries
+    // Query counts for apples, oranges, and matches
+    const queries = `
+      SELECT count() FROM apples GROUP ALL;
+      SELECT count() FROM oranges GROUP ALL;
+      SELECT count() FROM matches GROUP ALL;
+    `;
 
-  const metrics: MatchMetrics = {
-    totalApples: 0,
-    totalOranges: 0,
-    totalMatches: 0,
-    successRate: 0,
-  };
+    const results = await db.query<{ count: number }[]>(queries);
 
-  return { metrics };
+    // Extract counts from results - each result.result is an array with one object
+    const totalApples = Array.isArray(results[0]?.result) 
+      ? results[0].result[0]?.count ?? 0 
+      : 0;
+    const totalOranges = Array.isArray(results[1]?.result) 
+      ? results[1].result[0]?.count ?? 0 
+      : 0;
+    const totalMatches = Array.isArray(results[2]?.result) 
+      ? results[2].result[0]?.count ?? 0 
+      : 0;
+
+    // Calculate success rate (matches vs total fruits)
+    const totalFruits = totalApples + totalOranges;
+    const successRate = totalFruits > 0 
+      ? Math.round((totalMatches / totalFruits) * 100) 
+      : 0;
+
+    const metrics: MatchMetrics = {
+      totalApples,
+      totalOranges,
+      totalMatches,
+      successRate,
+    };
+
+    return { metrics };
+  } catch (error) {
+    console.error("Failed to fetch dashboard data:", error);
+
+    // Return fallback data if database is unavailable
+    const metrics: MatchMetrics = {
+      totalApples: 0,
+      totalOranges: 0,
+      totalMatches: 0,
+      successRate: 0,
+    };
+
+    return { metrics };
+  }
 }
