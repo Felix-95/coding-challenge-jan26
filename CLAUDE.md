@@ -14,7 +14,7 @@ A matchmaking system that pairs "apples" and "oranges" (fruit entities with attr
 npx supabase start
 
 # Serve edge functions (separate terminal)
-npx supabase functions serve --no-verify-jwt
+npx supabase functions serve --no-verify-jwt --env-file supabase/.env.local
 
 # Test edge functions
 curl http://127.0.0.1:54321/functions/v1/get-incoming-apple -H "Content-Type: application/json" -d '{}'

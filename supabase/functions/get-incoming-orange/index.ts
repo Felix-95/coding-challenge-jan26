@@ -35,8 +35,8 @@ Deno.serve(async (req) => {
 
     // Step 2: Capture the orange's communication
     // The orange expresses its attributes and preferences
-    const orangeAttrs = communicateAttributes(orange);
-    const orangePrefs = communicatePreferences(orange);
+    const orangeAttrs = await communicateAttributes(orange);
+    const orangePrefs = await communicatePreferences(orange);
 
     // Step 3: Store the new orange in SurrealDB
     const db = await getDb();

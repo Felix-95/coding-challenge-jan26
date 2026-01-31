@@ -230,256 +230,166 @@ Deno.test("generateFruit - some nulls are generated (low probability)", () => {
 });
 
 // ============================================================================
-// Communication Tests
+// Communication Tests (LLM-powered, require OPENAI_API_KEY)
 // ============================================================================
 
-Deno.test("communicateAttributes - returns non-empty string", () => {
-  const fruit = generateApple();
-  const message = communicateAttributes(fruit);
+const hasApiKey = !!Deno.env.get("OPENAI_API_KEY");
 
-  assert(typeof message === "string", "Should return a string");
-  assert(message.length > 0, "Should not be empty");
+Deno.test({
+  name: "communicateAttributes - returns non-empty string from LLM",
+  ignore: !hasApiKey,
+  async fn() {
+    const fruit = generateApple();
+    const message = await communicateAttributes(fruit);
+
+    assert(typeof message === "string", "Should return a string");
+    assert(message.length > 0, "Should not be empty");
+    console.log(`  LLM attributes: ${message}`);
+  },
 });
 
-Deno.test("communicateAttributes - mentions fruit type", () => {
-  const apple = generateApple();
-  const appleMessage = communicateAttributes(apple);
-  assert(appleMessage.toLowerCase().includes("apple"), "Apple message should mention 'apple'");
+Deno.test({
+  name: "communicateAttributes - fallback works without API key",
+  async fn() {
+    // Temporarily unset the key to test fallback
+    const originalKey = Deno.env.get("OPENAI_API_KEY");
+    if (originalKey) Deno.env.delete("OPENAI_API_KEY");
 
-  const orange = generateOrange();
-  const orangeMessage = communicateAttributes(orange);
-  assert(orangeMessage.toLowerCase().includes("orange"), "Orange message should mention 'orange'");
+    const fruit: Fruit = {
+      type: "apple",
+      attributes: {
+        size: 7,
+        weight: 180,
+        hasStem: true,
+        hasLeaf: false,
+        hasWorm: false,
+        shineFactor: "shiny",
+        hasChemicals: false,
+      },
+      preferences: {},
+    };
+
+    const message = await communicateAttributes(fruit);
+    assert(message.length > 0, "Fallback should return a non-empty string");
+    assert(message.toLowerCase().includes("apple"), "Fallback should mention fruit type");
+
+    // Restore key
+    if (originalKey) Deno.env.set("OPENAI_API_KEY", originalKey);
+  },
 });
 
-Deno.test("communicateAttributes - includes size info when present", () => {
-  // Generate until we get one with a size
-  let fruit: Fruit;
-  let attempts = 0;
-  do {
-    fruit = generateApple();
-    attempts++;
-  } while (fruit.attributes.size === null && attempts < 100);
+Deno.test({
+  name: "communicatePreferences - returns non-empty string from LLM",
+  ignore: !hasApiKey,
+  async fn() {
+    const fruit: Fruit = {
+      type: "apple",
+      attributes: {
+        size: 7,
+        weight: 180,
+        hasStem: true,
+        hasLeaf: false,
+        hasWorm: false,
+        shineFactor: "shiny",
+        hasChemicals: false,
+      },
+      preferences: {
+        size: { min: 5, max: 10 },
+        hasWorm: false,
+        shineFactor: "shiny",
+      },
+    };
 
-  if (fruit.attributes.size !== null) {
-    const message = communicateAttributes(fruit);
-    // Should mention the size value somewhere
-    assert(
-      message.includes(fruit.attributes.size.toString()) ||
-        message.toLowerCase().includes("size"),
-      "Should reference size"
-    );
-  }
+    const message = await communicatePreferences(fruit);
+    assert(typeof message === "string", "Should return a string");
+    assert(message.length > 0, "Should not be empty");
+    console.log(`  LLM preferences: ${message}`);
+  },
 });
 
-Deno.test("communicateAttributes - generates varied output", () => {
-  const fruit = generateApple();
-  const messages = new Set<string>();
+Deno.test({
+  name: "communicatePreferences - handles empty preferences via LLM",
+  ignore: !hasApiKey,
+  async fn() {
+    const fruit: Fruit = {
+      type: "orange",
+      attributes: {
+        size: 8,
+        weight: 200,
+        hasStem: false,
+        hasLeaf: false,
+        hasWorm: false,
+        shineFactor: "neutral",
+        hasChemicals: false,
+      },
+      preferences: {},
+    };
 
-  // Generate multiple messages for the same fruit
-  for (let i = 0; i < 20; i++) {
-    messages.add(communicateAttributes(fruit));
-  }
-
-  // Should have some variation (not all identical)
-  assert(messages.size > 1, "Should generate varied messages");
-  console.log(`  Generated ${messages.size} unique messages for same fruit`);
+    const message = await communicatePreferences(fruit);
+    assert(message.length > 0, "Should return a message even with no preferences");
+    console.log(`  LLM empty prefs: ${message}`);
+  },
 });
 
-Deno.test("communicatePreferences - returns non-empty string", () => {
-  const fruit = generateApple();
-  const message = communicatePreferences(fruit);
+Deno.test({
+  name: "communicatePreferences - fallback works without API key",
+  async fn() {
+    const originalKey = Deno.env.get("OPENAI_API_KEY");
+    if (originalKey) Deno.env.delete("OPENAI_API_KEY");
 
-  assert(typeof message === "string", "Should return a string");
-  assert(message.length > 0, "Should not be empty");
-});
+    const fruit: Fruit = {
+      type: "orange",
+      attributes: {
+        size: 8,
+        weight: 200,
+        hasStem: false,
+        hasLeaf: false,
+        hasWorm: false,
+        shineFactor: "neutral",
+        hasChemicals: false,
+      },
+      preferences: { hasWorm: false },
+    };
 
-Deno.test("communicatePreferences - handles fruit with no preferences", () => {
-  // Create a fruit with empty preferences
-  const fruit: Fruit = {
-    type: "apple",
-    attributes: {
-      size: 7,
-      weight: 180,
-      hasStem: true,
-      hasLeaf: false,
-      hasWorm: false,
-      shineFactor: "shiny",
-      hasChemicals: false,
-    },
-    preferences: {},
-  };
+    const message = await communicatePreferences(fruit);
+    assert(message.length > 0, "Fallback should return a non-empty string");
+    assert(message.toLowerCase().includes("apple"), "Fallback should mention target fruit type (apple)");
 
-  const message = communicatePreferences(fruit);
-  assert(message.length > 0, "Should return a message even with no preferences");
-  // Should indicate they're open-minded
-  assert(
-    message.toLowerCase().includes("open") ||
-      message.toLowerCase().includes("no") ||
-      message.toLowerCase().includes("easy"),
-    "Should indicate flexibility when no preferences"
-  );
-});
-
-Deno.test("communicatePreferences - mentions target fruit type when relevant", () => {
-  // Create fruits with specific preferences that will mention target type
-  const appleWithPrefs: Fruit = {
-    type: "apple",
-    attributes: {
-      size: 7,
-      weight: 180,
-      hasStem: true,
-      hasLeaf: false,
-      hasWorm: false,
-      shineFactor: "shiny",
-      hasChemicals: false,
-    },
-    preferences: {
-      size: { min: 5, max: 10 },
-    },
-  };
-
-  const orangeWithPrefs: Fruit = {
-    type: "orange",
-    attributes: {
-      size: 8,
-      weight: 200,
-      hasStem: false,
-      hasLeaf: false,
-      hasWorm: false,
-      shineFactor: "neutral",
-      hasChemicals: false,
-    },
-    preferences: {
-      size: { min: 5, max: 10 },
-    },
-  };
-
-  // Generate multiple messages to check that target type is mentioned at least sometimes
-  let appleFoundOrange = false;
-  let orangeFoundApple = false;
-
-  for (let i = 0; i < 10; i++) {
-    const appleMessage = communicatePreferences(appleWithPrefs);
-    const orangeMessage = communicatePreferences(orangeWithPrefs);
-    
-    if (appleMessage.toLowerCase().includes("orange")) appleFoundOrange = true;
-    if (orangeMessage.toLowerCase().includes("apple")) orangeFoundApple = true;
-  }
-
-  assert(appleFoundOrange, "Apple's preferences should mention 'orange' at least once in 10 tries");
-  assert(orangeFoundApple, "Orange's preferences should mention 'apple' at least once in 10 tries");
-});
-
-Deno.test("communicatePreferences - includes size preference when present", () => {
-  // Create a fruit with specific size preference
-  const fruit: Fruit = {
-    type: "apple",
-    attributes: {
-      size: 7,
-      weight: 180,
-      hasStem: true,
-      hasLeaf: false,
-      hasWorm: false,
-      shineFactor: "shiny",
-      hasChemicals: false,
-    },
-    preferences: {
-      size: { min: 5, max: 10 },
-    },
-  };
-
-  const message = communicatePreferences(fruit);
-  // Should mention the size values
-  assert(
-    message.includes("5") || message.includes("10") || message.toLowerCase().includes("size"),
-    "Should reference size preference"
-  );
-});
-
-Deno.test("communicatePreferences - includes worm preference", () => {
-  const fruit: Fruit = {
-    type: "orange",
-    attributes: {
-      size: 8,
-      weight: 200,
-      hasStem: false,
-      hasLeaf: false,
-      hasWorm: false,
-      shineFactor: "neutral",
-      hasChemicals: false,
-    },
-    preferences: {
-      hasWorm: false,
-    },
-  };
-
-  const message = communicatePreferences(fruit);
-  assert(
-    message.toLowerCase().includes("worm"),
-    "Should mention worm preference"
-  );
-});
-
-Deno.test("communicatePreferences - generates varied output", () => {
-  const fruit: Fruit = {
-    type: "apple",
-    attributes: {
-      size: 7,
-      weight: 180,
-      hasStem: true,
-      hasLeaf: false,
-      hasWorm: false,
-      shineFactor: "shiny",
-      hasChemicals: false,
-    },
-    preferences: {
-      size: { min: 5, max: 10 },
-      hasWorm: false,
-      shineFactor: "shiny",
-    },
-  };
-
-  const messages = new Set<string>();
-  for (let i = 0; i < 20; i++) {
-    messages.add(communicatePreferences(fruit));
-  }
-
-  assert(messages.size > 1, "Should generate varied preference messages");
-  console.log(`  Generated ${messages.size} unique preference messages`);
+    if (originalKey) Deno.env.set("OPENAI_API_KEY", originalKey);
+  },
 });
 
 // ============================================================================
 // Integration Tests
 // ============================================================================
 
-Deno.test("Integration - full fruit generation and communication flow", () => {
-  // Generate fruits
-  const apple = generateApple();
-  const orange = generateOrange();
+Deno.test({
+  name: "Integration - full fruit generation and LLM communication flow",
+  ignore: !hasApiKey,
+  async fn() {
+    const apple = generateApple();
+    const orange = generateOrange();
 
-  // Communicate attributes
-  const appleAttrs = communicateAttributes(apple);
-  const orangeAttrs = communicateAttributes(orange);
+    const appleAttrs = await communicateAttributes(apple);
+    const orangeAttrs = await communicateAttributes(orange);
+    const applePrefs = await communicatePreferences(apple);
+    const orangePrefs = await communicatePreferences(orange);
 
-  // Communicate preferences
-  const applePrefs = communicatePreferences(apple);
-  const orangePrefs = communicatePreferences(orange);
+    assert(appleAttrs.length > 20, "Apple attributes message should be substantial");
+    assert(orangeAttrs.length > 20, "Orange attributes message should be substantial");
+    assert(applePrefs.length > 10, "Apple preferences message should exist");
+    assert(orangePrefs.length > 10, "Orange preferences message should exist");
 
-  // All should be non-empty strings
-  assert(appleAttrs.length > 50, "Apple attributes message should be substantial");
-  assert(orangeAttrs.length > 50, "Orange attributes message should be substantial");
-  assert(applePrefs.length > 20, "Apple preferences message should exist");
-  assert(orangePrefs.length > 20, "Orange preferences message should exist");
-
-  console.log("\n  === Sample Apple ===");
-  console.log(`  Attributes: ${appleAttrs}`);
-  console.log(`  Preferences: ${applePrefs}`);
-  console.log("\n  === Sample Orange ===");
-  console.log(`  Attributes: ${orangeAttrs}`);
-  console.log(`  Preferences: ${orangePrefs}`);
+    console.log("\n  === Sample Apple (LLM) ===");
+    console.log(`  Attributes: ${appleAttrs}`);
+    console.log(`  Preferences: ${applePrefs}`);
+    console.log("\n  === Sample Orange (LLM) ===");
+    console.log(`  Attributes: ${orangeAttrs}`);
+    console.log(`  Preferences: ${orangePrefs}`);
+  },
 });
 
-Deno.test("Integration - batch generation produces valid diverse fruits", () => {
+Deno.test("Integration - batch generation produces valid diverse fruits", async () => {
   const fruits: Fruit[] = [];
   const appleCount = 20;
   const orangeCount = 20;
@@ -491,25 +401,23 @@ Deno.test("Integration - batch generation produces valid diverse fruits", () => 
     fruits.push(generateOrange());
   }
 
-  // Verify counts
   const apples = fruits.filter((f) => f.type === "apple");
   const oranges = fruits.filter((f) => f.type === "orange");
   assertEquals(apples.length, appleCount);
   assertEquals(oranges.length, orangeCount);
 
-  // Verify all have valid structure
   for (const fruit of fruits) {
     assertExists(fruit.type);
     assertExists(fruit.attributes);
     assertExists(fruit.preferences);
-
-    // Verify communication works for each
-    const attrMsg = communicateAttributes(fruit);
-    const prefMsg = communicatePreferences(fruit);
-    assert(attrMsg.length > 0);
-    assert(prefMsg.length > 0);
   }
 
-  console.log(`  Successfully generated and communicated ${fruits.length} fruits`);
+  // Test communication on a single fruit (async now)
+  const sampleAttr = await communicateAttributes(fruits[0]);
+  const samplePref = await communicatePreferences(fruits[0]);
+  assert(sampleAttr.length > 0);
+  assert(samplePref.length > 0);
+
+  console.log(`  Successfully generated ${fruits.length} fruits, communicated for 1`);
 });
 

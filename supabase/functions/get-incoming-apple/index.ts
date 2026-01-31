@@ -35,8 +35,8 @@ Deno.serve(async (req) => {
 
     // Step 2: Capture the apple's communication
     // The apple expresses its attributes and preferences
-    const appleAttrs = communicateAttributes(apple);
-    const applePrefs = communicatePreferences(apple);
+    const appleAttrs = await communicateAttributes(apple);
+    const applePrefs = await communicatePreferences(apple);
 
     // Step 3: Store the new apple in SurrealDB
     const db = await getDb();

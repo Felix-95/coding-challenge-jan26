@@ -24,8 +24,8 @@ export interface MatchContext {
 }
 
 export interface MatchMessages {
-  messageToIncoming: string | null;
-  messageToExisting: string | null;
+  messageToIncoming: string;
+  messageToExisting: string;
 }
 
 const SYSTEM_PROMPT = `You are a charming and playful fruit matchmaker with a talent for fruit puns. Your job is to write personalized messages announcing matches between apples and oranges.
@@ -162,7 +162,7 @@ Keep it to 2-3 sentences.`;
 /**
  * Generate personalized messages for a match.
  * Makes parallel API calls for both messages.
- * Returns null values on failure (graceful degradation).
+ * Throws if either LLM call fails.
  */
 export async function generateMatchMessages(
   context: MatchContext
@@ -175,26 +175,26 @@ export async function generateMatchMessages(
   const incomingPrompt = buildIncomingPrompt(context);
   const existingPrompt = buildExistingPrompt(context);
 
-  // Make parallel API calls for both messages
   const [incomingResult, existingResult] = await Promise.all([
     createChatCompletion([
       systemMessage,
       { role: "user", content: incomingPrompt },
-    ]).catch((error) => {
-      console.error("Failed to generate incoming message:", error);
-      return null;
-    }),
+    ]),
     createChatCompletion([
       systemMessage,
       { role: "user", content: existingPrompt },
-    ]).catch((error) => {
-      console.error("Failed to generate existing message:", error);
-      return null;
-    }),
+    ]),
   ]);
 
+  if (!incomingResult) {
+    throw new Error("LLM call failed: could not generate match message for incoming fruit");
+  }
+  if (!existingResult) {
+    throw new Error("LLM call failed: could not generate match message for existing fruit");
+  }
+
   return {
-    messageToIncoming: incomingResult?.content || null,
-    messageToExisting: existingResult?.content || null,
+    messageToIncoming: incomingResult.content,
+    messageToExisting: existingResult.content,
   };
 }

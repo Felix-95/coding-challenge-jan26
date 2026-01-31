@@ -114,7 +114,7 @@ export function BestMatchesTable({ matches }: BestMatchesTableProps) {
                     {match.status}
                   </td>
                   <td className="px-4 py-3 text-sm text-white/60">
-                    {new Date(match.createdAt).toLocaleString()}
+                    {new Date(match.createdAt).toISOString().replace("T", " ").slice(0, 19)}
                   </td>
                 </tr>
 
