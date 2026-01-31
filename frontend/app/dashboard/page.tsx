@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 import { getDashboardData } from "./loader";
+import { RunMatchingButton } from "./RunMatchingButton";
+import { MatchVisualization } from "./components/MatchVisualization";
 
 // =============================================================================
 // ⚠️  DISCLAIMER
@@ -84,14 +86,14 @@ function MetricCard({ title, value, icon, description }: MetricCardProps) {
   return (
     <div className="metric-card">
       <div className="flex items-center justify-between">
-        <span className="text-2xl">{icon}</span>
-        <span className="text-xs uppercase tracking-wide text-muted">
+        <span className="text-3xl">{icon}</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-white/60">
           {title}
         </span>
       </div>
       <div className="mt-4">
-        <p className="text-3xl font-bold">{value}</p>
-        <p className="mt-1 text-sm text-muted">{description}</p>
+        <p className="text-4xl font-bold text-white">{value}</p>
+        <p className="mt-2 text-sm text-white/60">{description}</p>
       </div>
     </div>
   );
@@ -128,7 +130,7 @@ function DashboardSkeleton() {
  */
 function ScaffoldNote({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-4 rounded-lg border border-dashed border-amber-400/50 bg-amber-50/50 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/30 dark:bg-amber-950/20 dark:text-amber-400">
+    <div className="mb-6 rounded-xl border border-dashed border-amber-400/30 bg-amber-500/10 px-5 py-4 text-sm text-amber-200 backdrop-blur-sm">
       <span className="mr-2">💡</span>
       {children}
     </div>
@@ -142,30 +144,31 @@ function ScaffoldNote({ children }: { children: React.ReactNode }) {
 export default function DashboardPage() {
   return (
     <div className="min-h-screen">
-      {/* Header - Feel free to redesign! */}
-      <header className="border-b border-zinc-200 bg-white/80 backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/80">
-        <div className="mx-auto max-w-7xl px-6 py-6">
+      {/* Header with modern glass-morphic design */}
+      <header className="border-b border-white/10 bg-white/5 backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl px-6 py-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">
+              <h1 className="text-3xl font-bold tracking-tight text-white">
                 🍎 Matchmaking Dashboard 🍊
               </h1>
-              <p className="mt-1 text-sm text-muted">
+              <p className="mt-2 text-sm text-white/70">
                 Creating perfect pears, one match at a time
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <button className="btn-primary">New Conversation</button>
+              <RunMatchingButton />
+              <button className="btn-secondary">New Conversation</button>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-6 py-8">
+      <main className="mx-auto max-w-7xl px-6 py-12">
         {/* Metrics Section */}
-        <section className="mb-8">
-          <h2 className="mb-4 text-lg font-semibold">Overview Metrics</h2>
+        <section className="mb-12">
+          <h2 className="mb-6 text-xl font-bold text-white">Overview Metrics</h2>
           <ScaffoldNote>
             <strong>This entire section is just an example!</strong> Think about
             what metrics actually prove your matchmaking system works well.
@@ -177,32 +180,16 @@ export default function DashboardPage() {
         </section>
 
         {/* Visualization Section */}
-        <section className="mb-8">
-          <h2 className="mb-4 text-lg font-semibold">
+        <section className="mb-12">
+          <h2 className="mb-6 text-xl font-bold text-white">
             Matchmaking Visualization
           </h2>
-          <ScaffoldNote>
-            <strong>Build whatever visualization makes sense for your solution!</strong>{" "}
-            This could be a chat interface, a network graph, a timeline, an
-            animation - get creative and show off your approach.
-          </ScaffoldNote>
-          <div className="card min-h-[400px]">
-            <div className="flex h-full items-center justify-center text-muted">
-              <div className="text-center">
-                <p className="text-4xl">🎯</p>
-                <p className="mt-4 text-lg font-medium">Visualization Area</p>
-                <p className="mt-2 max-w-md text-sm">
-                  Replace this with your own visualization. The README mentions
-                  &quot;you may choose the medium&quot; - so be creative!
-                </p>
-              </div>
-            </div>
-          </div>
+          <MatchVisualization />
         </section>
 
         {/* Recent Matches Section */}
-        <section className="mb-8">
-          <h2 className="mb-4 text-lg font-semibold">Recent Matches</h2>
+        <section className="mb-12">
+          <h2 className="mb-6 text-xl font-bold text-white">Recent Matches</h2>
           <ScaffoldNote>
             <strong>A table might not be the best way to show matches.</strong>{" "}
             Consider cards, a feed, or something more visual. You decide what
@@ -212,20 +199,20 @@ export default function DashboardPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-zinc-200 dark:border-zinc-700">
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted">
+                  <tr className="border-b border-white/10">
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-white/80">
                       Apple
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted">
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-white/80">
                       Orange
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted">
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-white/80">
                       Match Score
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted">
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-white/80">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted">
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-white/80">
                       Created At
                     </th>
                   </tr>
@@ -234,7 +221,7 @@ export default function DashboardPage() {
                   <tr>
                     <td
                       colSpan={5}
-                      className="px-4 py-8 text-center text-sm text-muted"
+                      className="px-4 py-8 text-center text-sm text-white/60"
                     >
                       No matches yet. Start a new conversation to create your
                       first pear! 🍐
@@ -248,7 +235,7 @@ export default function DashboardPage() {
 
         {/* Analytics Section */}
         <section>
-          <h2 className="mb-4 text-lg font-semibold">Analytics</h2>
+          <h2 className="mb-6 text-xl font-bold text-white">Analytics</h2>
           <ScaffoldNote>
             <strong>
               These chart placeholders are arbitrary examples - don&apos;t feel bound
@@ -259,20 +246,20 @@ export default function DashboardPage() {
           </ScaffoldNote>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div className="card min-h-[300px]">
-              <h3 className="mb-4 font-medium text-muted">
+              <h3 className="mb-4 font-semibold text-white/80">
                 Example: Match Quality Distribution
               </h3>
-              <div className="flex h-full items-center justify-center text-muted">
+              <div className="flex h-full items-center justify-center text-white/50">
                 <p className="text-sm">
                   Replace with your own analytics component
                 </p>
               </div>
             </div>
             <div className="card min-h-[300px]">
-              <h3 className="mb-4 font-medium text-muted">
+              <h3 className="mb-4 font-semibold text-white/80">
                 Example: Matches Over Time
               </h3>
-              <div className="flex h-full items-center justify-center text-muted">
+              <div className="flex h-full items-center justify-center text-white/50">
                 <p className="text-sm">
                   Replace with your own analytics component
                 </p>
@@ -282,8 +269,8 @@ export default function DashboardPage() {
         </section>
 
         {/* Footer Note */}
-        <footer className="mt-12 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-6 py-4 text-center text-sm text-muted dark:border-zinc-700 dark:bg-zinc-900">
-          <p className="font-medium">🚀 This entire dashboard is just scaffolding!</p>
+        <footer className="mt-16 rounded-xl border border-dashed border-white/20 bg-white/5 px-6 py-5 text-center text-sm text-white/70 backdrop-blur-sm">
+          <p className="font-semibold text-white">🚀 This entire dashboard is just scaffolding!</p>
           <p className="mt-1">
             Feel free to completely redesign, restructure, or rebuild from
             scratch.

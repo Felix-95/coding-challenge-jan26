@@ -5,13 +5,17 @@
    ============================================================================= */
 
 :root {
-  /* Colors - Light Mode */
+  /* Colors - Light Mode (with gradient background) */
   --color-background: #fafafa;
   --color-foreground: #0a0a0a;
   --color-muted: #71717a;
   --color-border: #e4e4e7;
   --color-card: #ffffff;
   --color-card-hover: #f4f4f5;
+
+  /* Gradient Background - Light Mode */
+  --gradient-from: #e0f2fe;
+  --gradient-to: #fef3c7;
 
   /* Accent Colors */
   --color-apple: #ef4444;
@@ -21,9 +25,9 @@
   --color-pear: #84cc16;
   --color-pear-light: #d9f99d;
 
-  /* Primary Action */
-  --color-primary: #3b82f6;
-  --color-primary-hover: #2563eb;
+  /* Primary Action - Bright lime green like the reference */
+  --color-primary: #a3e635;
+  --color-primary-hover: #84cc16;
 
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -42,10 +46,15 @@
   :root {
     --color-background: #09090b;
     --color-foreground: #fafafa;
-    --color-muted: #a1a1aa;
-    --color-border: #27272a;
-    --color-card: #18181b;
-    --color-card-hover: #27272a;
+    --color-muted: #9ca3af;
+    --color-border: #374151;
+    --color-card: rgba(55, 65, 81, 0.4);
+    --color-card-hover: rgba(55, 65, 81, 0.6);
+
+    /* Gradient Background - Dark Mode (inspired by reference) */
+    --gradient-from: #1e3a8a;
+    --gradient-via: #1e40af;
+    --gradient-to: #1e293b;
 
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
@@ -83,9 +92,37 @@
    ============================================================================= */
 
 body {
-  background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  position: relative;
+  min-height: 100vh;
+}
+
+/* Beautiful gradient background inspired by reference */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  background: linear-gradient(
+    135deg,
+    var(--gradient-from) 0%,
+    var(--gradient-via, var(--gradient-from)) 50%,
+    var(--gradient-to) 100%
+  );
+}
+
+@media (prefers-color-scheme: light) {
+  body::before {
+    background: linear-gradient(
+      135deg,
+      var(--gradient-from) 0%,
+      var(--gradient-to) 100%
+    );
+  }
 }
 
 /* =============================================================================
@@ -96,67 +133,97 @@ body {
 .card {
   background: var(--color-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   padding: 1.5rem;
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .card {
+    background: rgba(55, 65, 81, 0.5);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
 }
 
 .card:hover {
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
 /* Metric Cards */
 .metric-card {
   background: var(--color-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   padding: 1.5rem;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.2s ease;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .metric-card {
+    background: rgba(55, 65, 81, 0.5);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
 }
 
 .metric-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
 }
 
 /* Buttons */
 .btn-primary {
   background: var(--color-primary);
-  color: white;
-  padding: 0.625rem 1.25rem;
-  border-radius: var(--radius-md);
-  font-weight: 500;
+  color: #18181b;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
   font-size: 0.875rem;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+  transition: all 0.2s ease;
   cursor: pointer;
   border: none;
+  box-shadow: 0 4px 12px rgba(163, 230, 53, 0.3);
 }
 
 .btn-primary:hover {
   background: var(--color-primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(163, 230, 53, 0.4);
 }
 
 .btn-primary:active {
-  transform: scale(0.98);
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .btn-secondary {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.1);
   color: var(--color-foreground);
-  padding: 0.625rem 1.25rem;
-  border-radius: var(--radius-md);
-  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
   font-size: 0.875rem;
-  border: 1px solid var(--color-border);
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
   cursor: pointer;
+  backdrop-filter: blur(10px);
 }
 
 .btn-secondary:hover {
-  background: var(--color-card-hover);
-  border-color: var(--color-muted);
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
 }
 
 /* Text Colors */

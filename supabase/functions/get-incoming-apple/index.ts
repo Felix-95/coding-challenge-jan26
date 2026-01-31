@@ -2,6 +2,7 @@
 import "@supabase/functions-js/edge-runtime.d.ts";
 import { generateApple, communicateAttributes, communicatePreferences } from "../_shared/generateFruit.ts";
 import { getDb } from "../_shared/db.ts";
+import { computeMatchScores, type FruitData } from "../_shared/matchingScorer.ts";
 
 /**
  * Get Incoming Apple Edge Function
@@ -45,7 +46,62 @@ Deno.serve(async (req) => {
     });
 
     // Step 4: Match the new apple to existing oranges
-    // TODO: Implement apple matching logic
+    // Fetch active soft-criteria algorithm
+    const algorithmResult = await db.query<[{ id: string; key: string; name: string; version: string }[]]>(
+      `SELECT * FROM matching_algorithm WHERE key = 'soft-criteria-v1' AND status = 'active' LIMIT 1`
+    );
+    const algorithm = algorithmResult[0]?.[0];
+
+    // Fetch all oranges
+    const orangesResult = await db.query<[FruitData[]]>(`SELECT * FROM oranges`);
+    const oranges = orangesResult[0] || [];
+
+    // Compute matches and insert records
+    const appleData: FruitData = {
+      attributes: apple.attributes,
+      preferences: apple.preferences,
+    };
+
+    const matches = [];
+    for (const orange of oranges) {
+      const orangeData: FruitData = {
+        attributes: orange.attributes,
+        preferences: orange.preferences,
+      };
+
+      const scores = computeMatchScores(appleData, orangeData);
+
+      // Insert match record if algorithm exists
+      if (algorithm) {
+        // deno-lint-ignore no-explicit-any
+        const orangeRecord = orange as any;
+        const matchRecord = await db.create("match", {
+          incomingFruitId: createdApple.id,
+          incomingKind: "apple",
+          appleId: createdApple.id,
+          orangeId: orangeRecord.id,
+          matchingAlgorithmId: algorithm.id,
+          matchingAlgorithmName: algorithm.name,
+          matchingAlgorithmVersion: algorithm.version,
+          overallScore: scores.overallScore,
+          scoreAppleOnOrange: scores.scoreAppleOnOrange,
+          scoreOrangeOnApple: scores.scoreOrangeOnApple,
+          passedHardConstraints: true, // soft criteria only
+          violations: [],
+          appleStatus: "pending",
+          orangeStatus: "pending",
+          status: "proposed",
+          reason: "", // TODO: LLM later
+          reasonData: scores.breakdown,
+        });
+
+        matches.push({
+          matchId: matchRecord.id,
+          orangeId: orangeRecord.id,
+          scores,
+        });
+      }
+    }
 
     // Step 5: Communicate matching results via LLM
     // TODO: Implement matching results communication logic
@@ -57,6 +113,8 @@ Deno.serve(async (req) => {
         attributes: appleAttrs,
         preferences: applePrefs,
       },
+      matchCount: matches.length,
+      matches: matches,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
