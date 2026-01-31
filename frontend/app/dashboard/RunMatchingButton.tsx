@@ -31,7 +31,7 @@ export function RunMatchingButton() {
       onClick={handleClick}
       disabled={isLoading}
     >
-      {isLoading ? "Running..." : "New incoming fruit"}
+      {isLoading ? "Matching..." : "New incoming fruit"}
     </button>
   );
 }

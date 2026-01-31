@@ -1,69 +1,40 @@
 Hey Julian & Daniel,
 
-das ist mein Versuch der Apple-Oranges coding challenge. Hier kurze infos was bei der Implementation beachtet werden muss. 
+das ist mein Versuch der Apple-Oranges coding challenge. Hier kurze infos was beim Ausführen beachtet werden muss:
 
-- Die base Orangen/Apples/Algorithmus fügt man so hinzu:
-./scripts/add-soft-criteria-algorithm.sh   # Register matching algorithm
-./scripts/add-seed-fruits.sh               # Load initial fruits
+- In `.env.local` muss OpenAI API key gesetzt werden
+- Einige Skripte müssen zur initialisierung ausgeführt werden
+- An edge functions muss `.env.local` übergeben werden
 
-Außerdem muss ein OpenAI API key in der .env.local gesetzt werden.
+Am besten meinen Guide unten befolgen!
 Die Challenge hat Spaß gemacht und bis Dienstag :D
 
+### Setup
 
-## Quick Start
-
-### Prerequisites
-- Node.js 18+
-- pnpm (`npm install -g pnpm`)
-- SurrealDB (`brew install surrealdb/tap/surreal`)
-- Docker (for Supabase local)
-- OpenAI API key ([get one here](https://platform.openai.com/api-keys))
-
-### Setup Steps
-
+**Terminal 1** — SurrealDB:
 ```bash
-# 1. Install dependencies
-npm install                    # Root (Supabase CLI)
-cd frontend && pnpm install && cd ..   # Frontend
-
-# 2. Set up environment
-cp supabase/.env.example supabase/.env.local
-# Edit supabase/.env.local and add your OPENAI_API_KEY
-
-# 3. Start SurrealDB (in a separate terminal)
 surreal start --user root --pass root memory
-
-# 4. Start Supabase (in a separate terminal)
-npx supabase start
-
-# 5. Initialize database
-./scripts/apply-schema.sh      # Create tables
-
-# 6. Start edge functions (in a separate terminal)
-npx supabase functions serve --no-verify-jwt --env-file supabase/.env.local
-
-# 7. Seed data (after edge functions are running)
-./scripts/add-soft-criteria-algorithm.sh   # Register matching algorithm
-./scripts/add-seed-fruits.sh               # Load initial fruits
-
-# 8. Start frontend (in a separate terminal)
-cd frontend && pnpm dev
 ```
 
-### Verify It Works
-
+**Terminal 2** — Supabase + Edge Functions:
 ```bash
-# Test the API - should return a match with LLM-generated messages
-curl http://127.0.0.1:54321/functions/v1/get-incoming-apple \
-  -H "Content-Type: application/json" -d '{}' | jq '.messages'
+npx supabase start
+cp supabase/.env.example supabase/.env.local
+# Add your OPENAI_API_KEY to supabase/.env.local
+./scripts/apply-schema.sh
+./scripts/serve-functions.sh  # stays running
 ```
 
-Open http://localhost:3000/dashboard to see the frontend.
+**Terminal 3** — Seed data + Frontend:
+```bash
+./scripts/add-soft-criteria-algorithm.sh
+./scripts/add-seed-fruits.sh
+cd frontend && pnpm install && pnpm dev  # stays running
+```
 
 ---
 
-
----
+*What follows is the initial readme*
 
 # Coding Challenge - Matchmaking System
 
@@ -123,20 +94,18 @@ Now that we have our data and access to it, we need to implement the core of our
    - `communicatePreferences(fruit)` - Returns a human-readable description of what the fruit is looking for in a match
    - Both functions have extensive variability with multiple templates and phrasings
 
-3. **Store the new fruit in SurrealDB** ✅ *Implemented*
-   - Connect to SurrealDB instance via HTTP client
+3. **Store the new fruit in SurrealDB** 🔲 *TODO*
+   - Connect to SurrealDB instance
    - Insert the fruit record with attributes and preferences
 
-4. **Match the fruit to potential partners** ✅ *Implemented*
+4. **Match the fruit to potential partners** 🔲 *TODO*
    - Query existing fruits of the opposite type from SurrealDB
-   - Calculate compatibility scores using soft-criteria matching algorithm
-   - Return all matches ranked by overall score
+   - Calculate compatibility scores based on preference matching
+   - Return ranked matches
 
-5. **Communicate matching results via LLM** ✅ *Implemented*
-   - Uses AI SDK with OpenAI's `gpt-4o` model
-   - Generates personalized messages for highest-scoring match
-   - Two distinct messages: one for incoming fruit, one for existing fruit
-   - Playful "fruit matchmaker" persona with puns and compatibility highlights
+5. **Communicate matching results via LLM** 🔲 *TODO*
+   - Generate natural language response about the matches
+   - Include match explanations and compatibility scores if time allows
 
 #### Running the Backend Locally
 
@@ -144,12 +113,8 @@ Now that we have our data and access to it, we need to implement the core of our
 # Start Supabase local environment (from project root)
 npx supabase start
 
-# Copy env template and add your API keys
-cp supabase/.env.example supabase/.env.local
-# Edit supabase/.env.local and add your OPENAI_API_KEY
-
-# Serve edge functions with env file (in a separate terminal)
-npx supabase functions serve --no-verify-jwt --env-file supabase/.env.local
+# Serve edge functions (in a separate terminal)
+npx supabase functions serve --no-verify-jwt
 
 # Test the functions
 curl http://127.0.0.1:54321/functions/v1/get-incoming-apple -H "Content-Type: application/json" -d '{}'
@@ -210,16 +175,10 @@ Root
 │
 ├── supabase/
 │   ├── config.toml                    # Supabase local configuration
-│   ├── .env.example                   # Environment template
 │   └── functions/
 │       ├── _shared/
 │       │   ├── generateFruit.ts       # Fruit generation & communication
 │       │   ├── generateFruit.test.ts  # Deno tests
-│       │   ├── matchingScorer.ts      # Compatibility scoring algorithm
-│       │   ├── matchMessages.ts       # LLM message generation
-│       │   ├── openai.ts              # AI SDK OpenAI client
-│       │   ├── db.ts                  # SurrealDB HTTP client
-│       │   ├── schema.surql           # SurrealDB schema definitions
 │       │   └── deno.json              # Shared dependencies
 │       ├── get-incoming-apple/
 │       │   ├── index.ts               # Apple edge function
@@ -231,12 +190,6 @@ Root
 ├── data/
 │   ├── README.md                      # Data schema documentation
 │   └── raw_apples_and_oranges.json    # Seed data (40 fruits)
-│
-├── scripts/
-│   ├── apply-schema.sh                # Initialize SurrealDB tables
-│   ├── add-soft-criteria-algorithm.sh # Register matching algorithm
-│   ├── add-seed-fruits.sh             # Load initial fruit data
-│   └── delete-fruits.sh               # Clear all fruit data
 │
 ├── package.json                       # Root dependencies (supabase CLI)
 └── README.md                          # This file
